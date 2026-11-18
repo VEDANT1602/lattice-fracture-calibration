@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "Please use this citation when referring to the research software."
+type: software
+title: "How far can a uniform-lattice calibration travel across a stiffness patch?"
+authors:
+  - family-names: Thaker
+    given-names: Vedant
+repository-code: "https://github.com/VEDANT1602/lattice-fracture-calibration"
+abstract: "Energy released by a prescribed lattice cut near a heterogeneous stiffness patch."
