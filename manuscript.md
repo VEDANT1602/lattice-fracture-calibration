@@ -1,125 +1,79 @@
-# When one reference solve can replace a new solve for a cut spring network
+# Choosing a solver for repeated stiffness queries on a cut spring network
 
-**Vedant Thaker**  
-Independent Researcher, Jeffersonville, Indiana, United States  
-Correspondence: vthaker1@asu.edu  
+Vedant Thaker  
+Independent Researcher, Jeffersonville, Indiana, USA  
+vedant.thaker1602@gmail.com
+
 21 November 2026
 
-## Abstract
+### Abstract
 
-An isolated query for the energy released by a prescribed spring cut needs only one sparse solve. A reduced calculation has to recover its setup cost when many stiffness fields share the same lattice and cut. One uniform-network solve supplies trial forces and displacements that bracket the release for every positive stiffness field on that topology. On a panel of 2,160 fields covering three patch shapes and two random-field models, a 2% relative-error threshold accepted 1,037 predictions without a new solve. The remaining queries used the exact solver. The largest observed error of the combined procedure was 1.285%. In mixed batches the combined calculation was 1.79–2.03 times as fast after calibration as solving every field. None of the 288 strongest random-field cases passed the bound. Direct solution remains the appropriate choice for that batch and for an isolated query. The experiment concerns energy after a specified cut. It does not predict which bond will break.
+A stiffness-field study may require the value of a local response or just the fraction of fields exceeding a reference. Those requests need different stopping rules. A scalar square network with 42,848 unknowns provides a repeated-query benchmark. When 16 specified springs vary, a reusable Woodbury update gives the direct-solve result in 0.14 ms per field after setup. A trial-field bound resolves a 2% relative-accuracy request for all 48 mildly heterogeneous distributed fields tested and none of 48 strongly heterogeneous fields. Even at strong contrast, the same bound classifies 854 of 1,024 fresh fields relative to a uniform reference without iteration. The location of the changing springs and the requested output both affect solver choice.
 
-## 1. When is a calibration worth keeping?
+## A value or a threshold decision
 
-Removing a loaded bond changes the displacements available to the rest of a network. Hexner, Liu and Nagel related local bond response to changes in global elastic moduli after bond removal [1]. Reduced-basis methods have long separated offline calibration from repeated evaluation and used output bounds to assess accuracy [2]. Here the output is a single energy difference for a fixed cut. The question is how often one homogeneous solution can supply an acceptable estimate when the location, shape and values of the stiffness changes are unknown at calibration.
+Single-bond changes in elastic networks can substantially alter a global response [1]. Here the quantity of interest is local. For a cut of prescribed length and location, how much elastic energy is released per squared pre-cut force in the next bond? One user may ask for that number to 2% relative accuracy. Another may count the fraction of random stiffness fields for which it exceeds the uniform-network value. A 2%-accurate answer near the reference can fall on its wrong side. A wide interval far from the reference can settle the decision immediately.
 
-An earlier circular-patch calculation compared 288 nonuniform configurations. A geometry-matched uniform multiplier gave 4.18% mean absolute relative error, and a local slope correction gave 0.43%. That slope needed two perturbed solves for each patch description. Fitting a separate slope to each new patch is a poor bargain if a single direct solve already answers the question. The present test sets the shape-specific method aside and calibrates once per specimen and cut. The unequal costs of calibration, screening and fallback are measured separately.
+Consider an n × n square network of scalar, nearest-neighbor springs at unit spacing. The two grip rows have prescribed displacement, and the lateral edges are free. Across the horizontal midline, remove the n/4 leftmost vertical bonds, then release one further tip bond of unit stiffness. Let K be the positive-definite stiffness matrix of the remaining free nodes after this cut, and h its signed unit dipole at the tip endpoints. Under fixed grips, removing the tip releases its stored energy plus the relaxation energy of the surviving network. For nonzero pre-cut tip force F, these are F²/2 and F²hᵀK⁻¹h/2. Thus the normalized release E equals (1 + R)/2, where R = hᵀK⁻¹h. The unit stiffness fixes the scale. The index n measures specimen size at fixed spacing.
 
-## 2. The exact one-solve baseline
+## What a uniform solve buys
 
-Each spring connects horizontal or vertical neighbours on an n × n square lattice with one scalar displacement per node and unit spacing. The top and bottom rows are grips. The side boundaries are free. Starting at the left edge, remove a vertical springs that cross the horizontal midline. The next vertical spring is the prescribed cut. At a unit force magnitude in that spring, its stored energy is 1/(2kₜ), where kₜ is its stiffness. The grip positions stay fixed during subsequent relaxation.
+Preprocessing can pay off when thousands of parameter queries share a geometry [2]. Factor the uniform post-cut matrix K₀ once. Write x₀ = K₀⁻¹h and R₀ = hᵀx₀. For bond incidence bₑ, the nonnegative weights wₑ = (bₑᵀx₀)²/R₀ sum to one. Use the uniform-network potential and flow as admissible trial fields in the Dirichlet and Thomson principles [3]. For stiffness vector k this gives (1 + R₀/Σₑwₑkₑ)/2 ≤ E ≤ (1 + R₀Σₑwₑ/kₑ)/2. For 0 < L ≤ E ≤ U, returning √(LU) incurs at most √(U/L) − 1 relative error. To classify E, compare both endpoints with the reference.
 
-Let K be the stiffness matrix of the network after the specified bond is cut, restricted to free displacements. Let h apply a unit positive force to one former endpoint and a unit negative force to the other. Releasing the bond unloads this dipole. The subsequent relaxation contributes half the compliance R = hᵀK⁻¹h. The exact release is D = (1/kₜ + R)/2. Positive stiffness and connection to the grips make this solve well posed for all tested fields. The direct comparator assembles the cut matrix, factors it once and solves one right-hand side. It requires neither an intact-network solve nor subtraction of two large elastic energies.
+When only 16 known bonds change, cache H = BᵀK₀⁻¹B and f = Bᵀx₀ for their incidence columns B. With diagonal stiffness changes Δ, Woodbury gives R = R₀ − fᵀ(I + ΔH)⁻¹Δf [4]. Rank one is the Sherman–Morrison special case. For a distributed change on 86,059 bonds, a dense matrix with one double-precision entry per changed-bond pair alone would occupy about 55 GiB. We limit this implementation to the localized workload.
 
-The intact and cut calculations also agree by a classical rank-one identity. Sherman and Morrison considered a change to a single matrix element in 1950 [3]. Henderson and Searle give the general outer-product update and its historical development [4]. With intact matrix A = K + kₜhhᵀ, let c = hᵀA⁻¹h. Applying the Sherman–Morrison formula to K = A − kₜhhᵀ gives R = c/(1 − kₜc), hence D = 1/[2kₜ(1 − kₜc)]. This establishes equivalence with the intact-network expression. The timed baseline solves on K directly.
+For general fields, start preconditioned conjugate gradient (PCG) at x₀ and apply K₀⁻¹ as preconditioner [5]. One variant targets relative residual 10⁻¹⁰. Another stops for the requested scalar output. For an iterate x set r = h − Kx and L = (1 + 2hᵀx − xᵀKx)/2. The unaccounted energy equals rᵀK⁻¹r/2. Since K ≥ kₘᵢₙ K₀ in quadratic-form order, U = L + rᵀK₀⁻¹r/(2kₘᵢₙ) bounds E from above. We recompute the true residual before recording the interval. This certificate assumes exact arithmetic. The numerical checks below use a tolerance of 10⁻⁹.
 
-## 3. A bracket from the uniform network
+## Held-out timing comparison
 
-Solve K₀u₀ = h once with unit background stiffness, keeping the topology and grips fixed. Set R₀ = hᵀu₀. For each remaining bond e, let qₑ be its squared displacement difference under u₀, divided by R₀. These nonnegative weights sum to one. Record zero weight for the cut bond. For a new field, all bond stiffnesses kₑ and the separate tip stiffness kₜ must be supplied.
+The benchmark uses 48 independently seeded fields per family and size. In the local family, stiffnesses on the 16 bonds nearest the tip are independent and log-uniform from 1/4 to 4. Distributed fields threshold nodewise Gaussian white noise after Gaussian smoothing with scale three lattice spacings, using the sign of the sum at each bond’s endpoints. The two contrasts share field patterns. Mild stiffnesses take values 0.8 or 1.25, and strong ones take 0.25 or 4. These choices distinguish small and large departures without fitting any material. Preprocessing uses geometry, stipulated support and the uniform network alone.
 
-The uniform dipole flow remains a feasible unit flow for any positive kₑ. Its complementary energy bounds R above by R₀ times the weighted arithmetic mean of 1/kₑ. Applying the unit-voltage trial u₀/R₀ to the new network bounds R below by R₀ divided by the weighted arithmetic mean of kₑ. These are the finite-network Thomson and Dirichlet variational principles [5]. The fixed grips become one zero-increment-displacement boundary node. The bounds therefore apply to the scalar incremental problem even though the initial intact loading had nonzero grip separation.
+Runs used one thread, randomized query and method order, precomputed sparsity, and a fresh SuperLU factorization as reference on every field. Timings include field-dependent numeric assembly when needed. Field generation is excluded equally. At n = 208, geometry cost 38.1 ms for all methods. The reusable factor and reference solve cost 161.6 ms. The bound required a further 0.75 ms to form weights, and Woodbury required 40.5 ms for its 16 response columns and small matrix. Table 1 gives means across fields on this host. Screen-plus-PCG sums separately timed components for each case. The next experiment times a directly executed pipeline.
 
-Write L and U for the release limits obtained by substituting the two compliance limits into D. The screen returns C = √(LU) if √(U/L) − 1 ≤ ε. Otherwise it performs the exact solve. For D anywhere in the interval, the maximum absolute relative error of C cannot exceed √(U/L) − 1. This certificate follows from the energy inequalities. It does not use labels from the test panel. The estimate costs two weighted sums and one reciprocal per edge with no factorization.
+The screen resolved 0, 48 and 0 of the 48 point-value requests in the local, distributed mild and distributed strong families. The same counts occurred at n = 64 (3,968 unknowns). At strong contrast, fully converging PCG cost more than refactorization at both sizes. Stopping PCG as soon as it certified the output made it faster here. On the local fields, Woodbury recovered the direct values to floating-point accuracy. One local field at n = 208 changed threshold classification when its permitted 2% point estimate replaced its direct value.
 
-Two point estimates supply controls: keeping the alternative-path compliance at R₀, and approximating it by R₀ exp(−Σ qₑ log kₑ). The latter matches the first variation of log R at unit stiffness: differentiating hᵀK⁻¹h gives a negative squared bond displacement for each stiffness derivative. Both point estimates retain the exact tip term. Their errors show how much the fallback contributes.
 
-## 4. Test fields and error denominators
+| Field family | Direct LU | Tight PCG | 2% PCG | Screen + 2% PCG | Woodbury |
+| --- | --- | --- | --- | --- | --- |
+| 16 local | 185.4 | 130.2 | 34.32 | 34.35 | 0.142 |
+| Distributed mild | 183.1 | 99.4 | 21.86 | 0.160 | — |
+| Distributed strong | 199.5 | 390.2 | 44.93 | 45.08 | — |
+Table 1. Mean milliseconds per field at n = 208, with 48 held-out fields per row. Setup is reported separately. A dash marks a method omitted at distributed rank.
 
-The six fixed topologies cross n = 16, 32, 48 with a = n/4 or n/2. Each has a distinct uniform calibration and 360 test queries. No nonuniform field is used to fit the weights. Three compact masks are a rotated ellipse (semiaxes 3.1 and 1.45), a rotated strip (half-length 5, half-width 0.85), and two disjoint disks (radii 1.4 and 1.8, centers separated by 4.8). Each mask is translated within three lattice spacings of the tip and rotated through a seeded angle. These geometries test a broad inclusion, a slender inclusion, and disconnected support. They are prescribed stress tests, with dimensions in lattice spacings.
+## Exceedance frequency under three input laws
 
-For local masks, covered bonds have stiffness r or 1/r and background bonds have unit stiffness. For distributed fields, every bond has either r or 1/r. The independent binary model uses fair independent signs. The correlated binary model smooths nodewise Gaussian noise with a two-spacing Gaussian kernel, bilinearly samples it at bond midpoints and thresholds at the median. Sign reversal exchanges stiff and soft material. The absolute levels are the same across the two binary models. At r = 4 their maximum stiffness ratio is 16, compared with 4 for a local patch.
+At n = 208, set the threshold to the uniform response, E₀ = 1.2059805. Draw 1,024 fresh fields per family. Use exact Woodbury for known support. For distributed fields, apply the uniform-field bounds and switch to certified PCG only when the interval touches the reference. The timings in Table 2 include this control flow. On 32 seed indices selected in advance per family, a fresh direct solve checked the classifications. All 96 agreed.
 
-Each family uses 12 seeds, r = 1.25, 2, 4 and both signs. The contrast settings span mild, intermediate and wide departures from the unit reference. Sharing seeds across geometries and signs provides paired comparisons. The 2,160 configurations are an equally weighted design panel with no distributional claim for physical materials. An error percentage is 100 times |estimate/exact − 1|. A solve is avoided only when the two-sided certificate passes.
+At strong contrast the bounds settled 854 of 1,024 decisions on their own, despite settling no point-value requests at the 2% tolerance in Table 1. The estimated exceedance fractions have Monte Carlo standard error near 0.016 under each chosen field law. These are separate model probabilities. The two distributed rows use corresponding random maps, so their estimates are paired. All queries together reused 0.349 s of setup in this second run. The pattern generalizes algebraically to other positive networks, but the acceptance rates and timings depend on the field law, topology, solver and hardware. The benchmark measures a prescribed scalar cut on two finite grids. Extrapolation to crack growth, material failure or measured toughness requires different evidence.
 
-## 5. Accuracy and avoided solves
 
-Without fallback the uniform, log-sensitivity and bracket-center estimates had mean errors of 16.03%, 2.22% and 3.22%. The log-sensitivity point estimate had a maximum error of 47.37%, and the bracket center had a maximum error of 57.03%. The worst center prediction was 0.61277 against 0.39023 exactly in a sign-reversed correlated field at n = 16, a = 4 and r = 4 (seed 7). Its interval, 0.35903 to 1.04585, immediately disqualifies the estimate at 2%.
-
-The 2% screen accepted every r = 1.25 case (720), 265 of 720 at r = 2 and 52 of 720 at r = 4. Both binary models required fallback on all 288 strong-contrast cases. Across the full panel, 1,037 queries passed, and the combined method had mean error 0.094% and maximum error 1.285%. At tolerance 0.5%, 1%, 5% and 10%, it avoided 564, 772, 1,443 and 1,700 solves, with maximum observed errors of 0.336%, 0.504%, 3.519% and 8.048%, respectively. The 2% choice is an illustrative numerical specification, not a measured industrial tolerance.
-
-| Field family | Cases | Accepted at 2% | Mean raw error (%) | Max raw error (%) |
-| --- | --- | --- | --- | --- |
-| Ellipse | 432 | 222 | 1.46 | 14.38 |
-| Strip | 432 | 270 | 1.21 | 11.38 |
-| Two disks | 432 | 248 | 1.59 | 14.51 |
-| Independent binary | 432 | 144 | 5.54 | 54.23 |
-| Correlated binary | 432 | 153 | 6.31 | 57.03 |
-
-Table 1. Raw errors are for the geometric center before fallback. Each numerator counts estimates accepted without solving a new system.
-
-## 6. Cost of screening and calibration
-
-The timing test used precomputed stiffness arrays, identical input order within each pair of methods and the same precomputed sparse assembly pattern. A fixed random sample of 90 of the 360 queries for each topology was permuted within each of five repeats. The execution order of the direct, screen-only and hybrid methods was randomized. Reported times are median batch times divided by 90. Exact fallback used the same sparse assembly and SuperLU solver as the timed direct method. Allocation and factorization are included. Shared topology construction, field generation and disk I/O are excluded. One CPU thread was used for numerical libraries on an AMD EPYC 7763.
-
-The screen alone took 0.0067–0.0122 ms per query. With fallbacks included, the speedup over direct solution was 1.79–2.03 times on the six mixed batches. The warm calibration cost is the median of nine new uniform solves with weight construction. The first observed setup time at each topology gives a more conservative amortization check: using those measured costs gives 3–29 queries across topologies, including a single unusually expensive initial setup. The counts assume that the future batch has the same average time savings. Actual break-even for a particular ordering can differ.
-
-A second timing panel consisted entirely of r = 4 independent and correlated binary fields. All 48 queries per topology required fallback. Across topologies, the median hybrid/direct time ratio ranged from 0.94 to 1.11; fluctuations around one offer no consistent advantage. For a batch with that composition, skip calibration and use direct solves.
-
-| n / a | Setup (ms) | Direct (ms) | Hybrid (ms) | Queries to repay setup |
-| --- | --- | --- | --- | --- |
-| 16 / 4 | 0.603 | 0.400 | 0.223 | 4 |
-| 16 / 8 | 0.559 | 0.312 | 0.154 | 4 |
-| 32 / 8 | 1.893 | 1.779 | 0.966 | 3 |
-| 32 / 16 | 1.798 | 1.509 | 0.789 | 3 |
-| 48 / 12 | 4.379 | 4.266 | 2.312 | 3 |
-| 48 / 24 | 4.310 | 3.745 | 1.879 | 3 |
-
-Table 2. Time per query for the mixed panel. Break-even rounds setup/(direct − hybrid) up to a whole query. These are measured implementation costs on one machine.
-
-## 7. Scope of the result
-
-The positive result is limited to repeated queries on a known topology, with available stiffness fields, an admissible numerical error and a mixture that includes many fields close enough to the uniform state. A change of cut location, boundary conditions or specimen topology requires a new calibration. The unguarded correction fails as a general replacement for solving the network. Neither the screen nor direct comparison here competes against the best possible reused symbolic factorization, preconditioned iterative solver or higher-dimensional reduced basis.
-
-The energy after a specified cut also differs from the work or path of physical propagation. In the earlier circular grid, a competing spring would reach the same unit threshold first in 23 of 288 nonuniform settings. Hartquist and colleagues combined simulations and experiments to investigate intrinsic energy for crack growth in stretchable networks [6]. Nieves et al. varied directional stiffness and crack speed to calculate a dynamic energy-release-rate ratio for a propagating Mode I crack in a triangular lattice [7]. The present scalar model specifies exactly which bond is cut and assigns the same unit force magnitude at that bond in every trial. It provides a numerical benchmark for energy queries, without a material toughness interpretation.
+| Field family | Above E₀ / 1,024 | Fraction | PCG fallbacks | Generate (s) | Queries (s) |
+| --- | --- | --- | --- | --- | --- |
+| 16 local | 555 | 0.542 | 0 | 0.080 | 0.042 |
+| Distributed mild | 508 | 0.496 | 33 | 3.172 | 0.931 |
+| Distributed strong | 532 | 0.520 | 170 | 3.157 | 4.857 |
+Table 2. Each row uses 1,024 fields. Cumulative wall times exclude the independent direct-solver checks. Fixed-support queries use Woodbury throughout.
 
 ## Data and code availability
 
-The baseline repository contains the circular-patch reference code and 336-row dataset. The new scripts and machine-readable outputs accompany this paper in the revision supplement. Use transfer.py for the calibration and mixed timings, stress_timing.py for the all-fallback timing experiment, and verify_transfer.py for computational checks. The README and pinned requirements specify the invocation and environment. All fields are generated from recorded seeds.
+The companion supplement includes benchmark.py, uncertainty.py, the environment lock, 288 field-level timing records, 3,072 threshold decisions and the verification script. Each random field is regenerated from its recorded seed.
 
-[Pinned baseline](https://github.com/VEDANT1602/lattice-fracture-calibration/tree/f943322c44df01ecfcb4f81c1b686315a79a9e6a) · [Revision code and data](https://github.com/VEDANT1602/lattice-fracture-calibration/tree/main/revision/supplement) · [Preparation record](https://github.com/VEDANT1602/lattice-fracture-calibration/blob/main/revision/PREPARATION.md)
+[Study files, software and source records](https://github.com/VEDANT1602/lattice-fracture-calibration/tree/main/study)
 
-## Computational verification
+## Author and disclosures
 
-All 2,160 releases lay within their independently computed bounds to numerical precision. In 30 sentinel cases the direct dipole release agreed with a separately assembled before/after energy calculation to within 1.27 × 10⁻¹³ relative error. A verifier checks case counts, bound ordering, the five acceptance counts and timing denominators. The previous independent reconstruction of the circular grid also agrees with the pinned release, grip and predictor fields to within 2.6 × 10⁻¹² relative discrepancy across all 336 rows. These checks address the discrete model.
+Vedant Thaker is the sole author and set the research question. OpenAI Codex assisted with deriving and implementing the numerical comparisons, executing the random-field benchmarks and drafting the results.
 
-## Author contribution
-
-Vedant Thaker is the sole author. He designed the original scalar lattice fracture study, wrote its manuscript, developed its original software, and requested the comparisons and checks reported in this revision.
-
-## Use of computational assistance
-
-OpenAI Codex assisted with the rank-one and energy-bound calculations, held-out field generation, direct-solve checks, screening and fallback timing comparisons, and reference verification, as well as literature checks and preparation of the revised text. The author set the research question and requested the revision.
-
-## Funding
-
-This research received no specific grant from any funding agency in the public, commercial, or not-for-profit sectors.
-
-## Competing interests
-
-The author declares no competing interests.
+This research received no specific grant from any funding agency in the public, commercial, or not-for-profit sectors. The author declares no competing interests.
 
 ## References
 
-[1] D. Hexner, A. J. Liu and S. R. Nagel. Linking microscopic and macroscopic response in disordered solids. Physical Review E 97, 063001 (2018). https://doi.org/10.1103/PhysRevE.97.063001
+[1] D. Hexner, A. J. Liu and S. R. Nagel. Linking microscopic and macroscopic response in disordered solids. Physical Review E 97, 063001 (2018). <https://doi.org/10.1103/PhysRevE.97.063001>
 
-[2] G. Rozza, D. B. P. Huynh and A. T. Patera. Reduced Basis Approximation and a Posteriori Error Estimation for Affinely Parametrized Elliptic Coercive Partial Differential Equations: Application to Transport and Continuum Mechanics. Archives of Computational Methods in Engineering 15, 229–275 (2008). https://doi.org/10.1007/s11831-008-9019-9
+[2] G. Rozza, D. B. P. Huynh and A. T. Patera. Reduced Basis Approximation and a Posteriori Error Estimation for Affinely Parametrized Elliptic Coercive Partial Differential Equations: Application to Transport and Continuum Mechanics. Archives of Computational Methods in Engineering 15, 229–275 (2008). <https://doi.org/10.1007/s11831-008-9019-9>
 
-[3] J. Sherman and W. J. Morrison. Adjustment of an Inverse Matrix Corresponding to a Change in One Element of a Given Matrix. Annals of Mathematical Statistics 21(1), 124–127 (1950). https://doi.org/10.1214/aoms/1177729893
+[3] A. Nachmias. Random Walks and Electric Networks. In Planar Maps, Random Walks and Circle Packing, Lecture Notes in Mathematics 2243, 11–31 (2020). <https://doi.org/10.1007/978-3-030-27968-4_2>
 
-[4] H. V. Henderson and S. R. Searle. On Deriving the Inverse of a Sum of Matrices. SIAM Review 23(1), 53–60 (1981). https://doi.org/10.1137/1023004
+[4] H. V. Henderson and S. R. Searle. On Deriving the Inverse of a Sum of Matrices. SIAM Review 23(1), 53–60 (1981). <https://doi.org/10.1137/1023004>
 
-[5] A. Nachmias. Random Walks and Electric Networks. In Planar Maps, Random Walks and Circle Packing, Lecture Notes in Mathematics 2243, 11–31 (2020). https://doi.org/10.1007/978-3-030-27968-4_2
-
-[6] C. Hartquist, S. Wang, Q. Cui, W. Matusik, B. Deng and X. Zhao. Scaling Law for Intrinsic Fracture Energy of Diverse Stretchable Networks. Physical Review X 15, 011002 (2025). https://doi.org/10.1103/PhysRevX.15.011002
-
-[7] M. J. Nieves, A. B. Movchan, I. S. Jones and G. S. Mishuris. Propagation of Slepyan’s crack in a non-uniform elastic lattice. Journal of the Mechanics and Physics of Solids 61(6), 1464–1488 (2013). https://doi.org/10.1016/j.jmps.2012.12.006
+[5] R. Barrett, M. Berry, T. F. Chan, J. Demmel, J. Donato, J. Dongarra, V. Eijkhout, R. Pozo, C. Romine and H. van der Vorst. Templates for the Solution of Linear Systems: Building Blocks for Iterative Methods. SIAM (1994). <https://doi.org/10.1137/1.9781611971538>
