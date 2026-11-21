@@ -1,4 +1,18 @@
-# Estimating the energy released by one spring cut
+# When one reference solve can replace a new solve for a cut spring network
+
+Vedant Thaker · November 21, 2026
+
+An isolated query for the energy released by a prescribed spring cut needs only one sparse solve. A reduced calculation has to recover its setup cost when many stiffness fields share the same lattice and cut.
+
+- [Revised manuscript (PDF)](manuscript.pdf) · [Editable manuscript](manuscript.md)
+- [Revision code, results and reproduction instructions](revision/supplement/) · [Preparation record](revision/PREPARATION.md)
+- [Baseline software and results at the study commit](https://github.com/VEDANT1602/lattice-fracture-calibration/tree/f943322c44df01ecfcb4f81c1b686315a79a9e6a) · [Software license](LICENSE) · [Third-party terms](LICENSING.md)
+
+## Earlier study and reproduction instructions
+
+The following instructions and results describe the original study. The revised paper and its supplemental tests are linked above.
+
+### Estimating the energy released by one spring cut
 
 A cut releases the strain energy in a loaded spring and lets neighboring springs relax. How much relaxation can a calibration on a uniform lattice account for when the crack tip actually sits in a soft patch?
 
@@ -14,7 +28,7 @@ The script loads a square antiplane lattice to unit force in its prescribed tip 
 | Geometry-matched uniform calibration | 4.18% |
 | Calibration with local stiffness slope | 0.43% |
 
-The tabulated quantity is the release from that single prescribed cut. Predicting which spring fails next, or estimating a physical toughness, would require a crack-growth and failure model. [Full results](results.csv) · [Derivation](manuscript.md) · [Paper PDF](manuscript.pdf)
+The tabulated quantity is the release from that single prescribed cut. Predicting which spring fails next, or estimating a physical toughness, would require a crack-growth and failure model. [Full results](results.csv) · [Derivation](https://github.com/VEDANT1602/lattice-fracture-calibration/blob/f943322c44df01ecfcb4f81c1b686315a79a9e6a/manuscript.md) · [Paper PDF](https://github.com/VEDANT1602/lattice-fracture-calibration/blob/f943322c44df01ecfcb4f81c1b686315a79a9e6a/manuscript.pdf)
 
 ## Reproduce the calculations
 
