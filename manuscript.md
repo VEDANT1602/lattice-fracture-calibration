@@ -43,9 +43,7 @@ At n = 208, common geometry cost 19.2 ms. Uniform assembly added 1.6 ms for the 
 | 288 | 82,368 | 337.8 | 110.3 | 69.7 | 329.4 | 424.2 | 44.4 |
 Table 1. Median milliseconds per query across eight strong fields per size. Field AMG builds the hierarchy anew. Uniform AMG reuses its hierarchy. The scalar method has a different accuracy requirement.
 
-![Scaling of median per-field wall time for the six methods](study/scaling.png)
-
-Figure 1. Strong distributed fields across five specimen sizes. Time is on a logarithmic scale. Each solid curve measures a full solve. The dashed curve measures the time to a certified scalar estimate.
+![Figure 1. Strong distributed fields across five specimen sizes. Median per-field time is on a logarithmic scale. Each solid curve measures a full solve. The dashed curve measures the time to a certified scalar estimate.](study/scaling.png)
 
 Of the 40 strong-field comparisons in Table 1, the certified result was faster than reused-pattern Cholesky in 35, including all eight at each of the two largest sizes. The iterative AMG methods cost more than reused-pattern Cholesky at every size on median. At n = 288, building a fresh hierarchy reduced median CG iterations from 46.5 to 24 relative to uniform reuse. The medians of the phase times and individual paired timings are available in the supplement. On all 120 fields, the five full-solve responses differed from SuperLU by at most 1.9 × 10⁻¹⁴ in relative terms. The largest observed certified-estimate error was 1.478%.
 
