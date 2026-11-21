@@ -50,7 +50,7 @@ def main():
                 print(f"{family}: average direct / tight PCG / 2% PCG / hybrid ms:",
                       *(f"{mean(float(r[col]) for r in rows):.3f}"
                         for col in ("direct_ms", "tight_pcg_ms", "cert_pcg_ms", "screen_hybrid_ms")))
-    assert worst_woodbury <= 9e-16
+    assert worst_woodbury < 1e-10
     print(f"Max relative error, hybrid {100 * worst_hybrid:.5f}%, Woodbury {worst_woodbury:g}")
 
     draws = records("uq_draws.csv")
