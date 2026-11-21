@@ -1,12 +1,9 @@
-# Choosing a solver for repeated stiffness queries on a cut spring network
+# When a stiffness query can stop before a point solve
 
-Technical report by Vedant Thaker, Independent Researcher, Jeffersonville, Indiana. Correspondence: vedant.thaker1602@gmail.com.
+Numerical methods report by Vedant Thaker, Independent Researcher, Jeffersonville, Indiana, USA.
 
-A stiffness-field study may require the value of a local response or just the fraction of fields exceeding a reference. Those requests need different stopping rules. A scalar square network with 42,848 unknowns provides a repeated-query benchmark. When 16 specified springs vary, a reusable Woodbury update gives the direct-solve result in 0.14 ms per field after setup. A trial-field bound resolves a 2% relative-accuracy request for all 48 mildly heterogeneous distributed fields tested and none of 48 strongly heterogeneous fields. Even at strong contrast, the same bound classifies 854 of 1,024 fresh fields relative to a uniform reference without iteration. The location of the changing springs and the requested output both affect solver choice.
+Estimating a response to a specified accuracy and deciding whether it crosses a threshold can require different work. On a cut spring network with 42,848 free nodes, trial energy bounds settled 854 of 1,024 threshold queries for strongly heterogeneous fields. The same bounds met a 2% point-value tolerance on none of 48 strong fields in a separate panel. Sparse Cholesky with a reusable symbolic factor was a substantially faster direct comparator than fresh SuperLU. On eight other strong fields of this size, median query times were 30.7 ms for reused-pattern Cholesky, 138.8 ms for SuperLU and 20.7 ms for a 2% output certificate. Rebuilding a classical algebraic multigrid hierarchy and converging preconditioned conjugate gradients took 161.5 ms. Five specimen sizes establish the range of this comparison. The practical choice depends on the requested output, the contrast and the number of queries that can share setup.
 
-- [Read the paper](manuscript.pdf)
-- [Read the plain-text manuscript](manuscript.md)
-- [Reproduce the analysis and inspect the source and data records](study/README.md)
-- [Software license](LICENSE) and [third-party terms](LICENSING.md)
-- [Preparation record](study/PREPARATION.md)
-- [Previous manuscript and supplements](https://github.com/VEDANT1602/lattice-fracture-calibration/tree/85bf05d1b58dde306f5fca88ef20fbf640c7a7df)
+[Paper (PDF)](manuscript.pdf) · [Editable text](manuscript.md) · [Methods and study files](study/README.md) · [Manuscript history](study/VERSION.md)
+
+[Author-owned software license](LICENSE) · [Third-party terms](LICENSING.md) · [Previous version](https://github.com/VEDANT1602/lattice-fracture-calibration/tree/731f1fa71c291665799f20e00f5f999a515ca377)

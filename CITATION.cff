@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "Please cite this software if you use it."
 type: software
-title: "Choosing a solver for repeated stiffness queries on a cut spring network"
+title: "When a stiffness query can stop before a point solve"
 authors:
   - family-names: Thaker
     given-names: Vedant
