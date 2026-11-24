@@ -17,7 +17,7 @@ python verify.py
 
 The first two commands that invoke study scripts regenerate CSV files in this directory. Make a separate copy first if preserving the distributed timing records. To check the archived tables without rerunning timing measurements, use only `python verify.py`. That command uses the standard library. Execution times vary with the hardware, load, numerical libraries and their build. The studies request one thread each for OpenBLAS, MKL and OpenMP.
 
-## Data and estimands
+## Two-size benchmark: data and estimands
 
 * `setup.csv` contains geometry setup shared by all approaches, uniform factorization and right-hand-side solve required by all recycled approaches, extra trial-field setup and extra 16-column Woodbury setup. Direct SuperLU requires geometry only.
 * `queries_64.csv` and `queries_208.csv` contain 48 fresh fields per family and size. Solver timings include field-dependent matrix assembly for those that need it. Field generation is outside each compared timer. The fixed-support shortcuts exploit the 16 prescribed edge indices. The dense-rank Woodbury storage estimate is the size of one dense edge-by-edge matrix, not a lower bound on every possible implementation. Direct LU solves the sparse system from scratch each time. The 2% PCG implementation and tight PCG use the same preconditioner and initial guess. The screened hybrid's point-query column sums individual per-field component times, including fallback when required. Independent runs should reproduce numerical conclusions within double-precision tolerance. Latencies and bit patterns can differ.
@@ -55,3 +55,20 @@ Figure rendering: Matplotlib 3.10.8.
 ## Independent energy check
 
 Run `python independent_energy.py` to regenerate `independent_energy.csv`. A separate implementation loops through horizontal and vertical bonds, assembles the full dense stiffness operator and imposes displacement zero on the bottom grip and one on the top. It solves pre-cut and post-cut equilibrium separately and sums individual spring energies. Dividing their difference by the squared tip force gives a direct check on the assembly, boundary conditions and dipole normalization in the production code. The nine cases combine widths 8, 12 and 16 with uniform, smoothly varying and stepped stiffnesses. This check tests the numerical observable within the specified mechanical model.
+
+
+## Timing spreads, setup recovery and threshold classification
+
+Run the following from this folder. The replay uses the pinned Python 3.12 Linux solver stack in `scaling-requirements.lock`.
+
+```sh
+python timing_spread.py
+python threshold_compare.py --out reproduced-threshold
+python verify_threshold_compare.py
+```
+
+`timing_spread.py` reads the distributed 720-row point-solver timings. For each size, family and method, `scaling_quartiles.csv` records the linearly interpolated 25th percentile, median, 75th percentile and interquartile width over the eight simulated stiffness fields. Each received one timed execution per method. Consequently field variation and machine timing noise both enter these descriptive spreads. `scaling_amortization.csv` subtracts direct-symbolic setup from the certificate setup; both require the same uniform assembly and geometry. It gives the number of queries needed to offset the premium assuming constant median charges and the first observed crossing when the eight paired savings are accumulated by increasing seed. A blank field means that no crossing was observed in the specified eight queries, or that the median savings were nonpositive, depending on the column.
+
+`threshold_compare.py` reconstructs all 3,072 fields and checks them against `uq_draws.csv` while it executes. Both uniform factors pay for their preconditioner, trial weights and 16-bond Woodbury cache. The field Cholesky baseline pays once for symbolic analysis, then assembles and numerically refactorizes the field matrix on every query. All three operate on exactly the same stiffness values. Seed 712308 permutes the family–field cases and the three timings within each case; a disposable 32-wide network warms up the paths. The 96 archived SuperLU spot checks give a separate reference for the new direct Cholesky values. The new hardware and versions are recorded in `threshold_environment.json`; compare each method with contemporaneous measurements on the same host.
+
+The distributed `threshold_fields.csv`, `threshold_setup.csv` and `threshold_summary.csv` belong to this paired replay. Timing totals exclude generation, common setup and the comparisons performed outside the timers. `verify_threshold_compare.py` independently recomputes each decision and the summary totals from these files and reads no solver code. To check a regenerated timing run, copy this verifier and `uq_draws.csv` into its output directory and execute the copy. The older `uq_*.csv` files and legacy solver runs are retained for numerical comparison.

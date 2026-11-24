@@ -4,13 +4,11 @@ Vedant Thaker
 Independent Researcher, Jeffersonville, Indiana, USA  
 vedant.thaker1602@gmail.com
 
-Numerical methods report
-
-**Research period (author-reported)** · August 2–13, 2026 &nbsp; | &nbsp; **Manuscript revised** · November 21, 2026
+Numerical benchmark · November 24, 2026
 
 ### Abstract
 
-Estimating a response to a specified accuracy and deciding whether it crosses a threshold can require different work. On a cut spring network with 42,848 free nodes, trial energy bounds settled 854 of 1,024 threshold queries for strongly heterogeneous fields. The same bounds met a 2% point-value tolerance on none of 48 strong fields in a separate panel. Sparse Cholesky with a reusable symbolic factor was a substantially faster direct comparator than fresh SuperLU. On eight other strong fields of this size, median query times were 30.7 ms for reused-pattern Cholesky, 138.8 ms for SuperLU and 20.7 ms for a 2% output certificate. Rebuilding a classical algebraic multigrid hierarchy and converging preconditioned conjugate gradients took 161.5 ms. Five specimen sizes establish the range of this comparison. The practical choice depends on the requested output, the contrast and the number of queries that can share setup.
+Whether to factor a cut spring network depends on what the caller needs. On a 42,848-unknown network, classical trial-energy bounds settled 854 of 1,024 decisions about whether the response exceeded the uniform-network value. Those bounds alone reached 2% relative accuracy on none of 48 strong fields in a separate value-estimation panel. For eight additional strong fields, a certified scalar estimate took 244.4 ms in total, including setup, against 283.5 ms for full solves with reused-pattern Cholesky. For the first field alone, Cholesky was faster (71.9 versus 91.9 ms). The scalar method first recovered its setup cost on the fourth field in seed order. The benchmark quantifies the cost of these two requested outputs under a fixed load and prescribed cut.
 
 ## A value or a threshold decision
 
@@ -32,18 +30,19 @@ The local family varies the 16 nearest surviving bonds to the tip independently,
 
 Five sizes have 3,968 to 82,368 free nodes. At each size, eight seed indices generated fields in each family. Six methods ran in randomized order on each field. The two direct CHOLMOD configurations use supernodal LLᵀ [6]. One orders and factorizes each field from scratch. The other retains its symbolic factor and lower-triangle layout, then replaces the values and refactorizes. Fresh SuperLU uses its default sparse ordering. Classical Ruge–Stüben algebraic multigrid (AMG) in PyAMG [7] preconditions CG, either through a newly built hierarchy per field or through one hierarchy built on uniform stiffness. Both use symmetric Gauss–Seidel smoothing, V-cycles and a relative residual tolerance of 10⁻¹⁰. Those five methods solve for the full displacement vector.
 
-The sixth method only guarantees the scalar response to 2%. It tries the trial-field interval before assembly, then, when necessary, advances PCG using a uniform Cholesky factor until the residual interval is narrow enough. Both iterative multigrid methods start from zero; the certified iteration starts from the uniform solution paid for during setup. Single-thread timings include per-field assembly, required representation changes, factorization or hierarchy construction, and solution. Timing excludes field generation, shared geometry and reusable setup. Stored fields and all individual timings accompany the paper.
+The sixth method only guarantees the scalar response to 2%. It tries the trial-field interval before assembly, then, when necessary, advances PCG using a uniform Cholesky factor until the residual interval is narrow enough. Both iterative multigrid methods start from zero; the certified iteration starts from the uniform solution paid for during setup. Single-thread timings include per-field assembly, required representation changes, factorization or hierarchy construction, and solution. Timing excludes field generation, shared geometry and reusable setup. The supplement records field-generation seeds and every method timing.
 
-At n = 208, common geometry cost 19.2 ms. Uniform assembly added 1.6 ms for the reusable methods. Further setup costs were 19.9 ms for the Cholesky pattern, 41.6 ms for uniform AMG, and 52.3 ms for the Cholesky-based certificate. On strong fields, preserving the Cholesky pattern cut the direct median from 50.9 to 30.7 ms. The scalar-only method took 20.7 ms, a factor of 1.48 relative to that direct baseline. Comparing it only to the 138.8 ms SuperLU result would imply a factor of 6.71. The repeated-query benefit is smaller once the direct solver uses symmetry, and the scalar method’s larger setup matters for short batches. At the same size the mild-field certificate took 0.17 ms because the trial interval sufficed before assembly.
+At n = 208 both reusable solvers incurred 19.2 ms for geometry and 1.6 ms for uniform assembly. The additional setup took 19.9 ms for the Cholesky pattern and 52.3 ms for the certificate, a difference of 32.4 ms. Median strong-field query times after setup were 30.7 and 20.7 ms, respectively (Table 1). In ascending seed order the first three fields still favored Cholesky (133.9 versus 143.6 ms including setup). After the fourth the totals were 164.4 versus 161.9 ms. After eight the scalar method saved 39.1 ms, or 13.8% of total Cholesky time when both start from scratch. At n = 64 the eight strong fields together did not recover the scalar method’s setup cost. A threshold or tolerance that admits a trial field changes the economics: on the mild fields at n = 208 the scalar method took a median 0.17 ms per query.
 
-| Side n | Free nodes | Fresh LU | Fresh Cholesky | Reused Cholesky | Field AMG | Uniform AMG | 2% scalar |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 64 | 3,968 | 8.1 | 4.0 | 1.8 | 14.9 | 29.3 | 1.6 |
-| 96 | 9,024 | 18.6 | 9.2 | 4.5 | 31.9 | 57.9 | 3.9 |
-| 144 | 20,448 | 51.7 | 20.6 | 12.0 | 69.8 | 115.8 | 10.4 |
-| 208 | 42,848 | 138.8 | 50.9 | 30.7 | 161.5 | 228.4 | 20.7 |
-| 288 | 82,368 | 337.8 | 110.3 | 69.7 | 329.4 | 424.2 | 44.4 |
-Table 1. Median milliseconds per query across eight strong fields per size. Field AMG builds the hierarchy anew. Uniform AMG reuses its hierarchy. The scalar method has a different accuracy requirement.
+| Method | n = 64 | n = 96 | n = 144 | n = 208 | n = 288 |
+| --- | --- | --- | --- | --- | --- |
+| Fresh LU | 8.1 (1.2) | 18.6 (1.8) | 51.7 (2.7) | 138.8 (7.7) | 337.8 (36.5) |
+| Fresh Cholesky | 4.0 (0.3) | 9.2 (0.7) | 20.6 (3.0) | 50.9 (2.9) | 110.3 (8.9) |
+| Reused Cholesky | 1.8 (0.1) | 4.5 (0.4) | 12.0 (1.7) | 30.7 (1.0) | 69.7 (3.6) |
+| Field AMG | 14.9 (1.6) | 31.9 (3.6) | 69.8 (4.5) | 161.5 (13.6) | 329.4 (21.9) |
+| Uniform AMG | 29.3 (6.1) | 57.9 (4.0) | 115.8 (4.2) | 228.4 (13.6) | 424.2 (17.9) |
+| 2% scalar | 1.6 (0.4) | 3.9 (0.9) | 10.4 (2.0) | 20.7 (3.0) | 44.4 (3.2) |
+Table 1. Median query time after setup in milliseconds, with interquartile width (75th minus 25th percentile) in parentheses. Each cell contains eight strong fields. Quartiles use linear interpolation. The point solvers return the full vector. The last row targets the scalar response to 2% relative accuracy.
 
 ![Figure 1. Strong distributed fields across five specimen sizes. Median per-field time is on a logarithmic scale. Each solid curve measures a full solve. The dashed curve measures the time to a certified scalar estimate.](study/scaling.png)
 
@@ -55,16 +54,16 @@ The storage tradeoff differs from the latency ranking. For one strong field at n
 
 A 48-field-per-family accuracy panel at each of n = 64 and 208 found that the trial interval alone met the 2% point-value criterion on all mild distributed fields and on no local or strong fields. On the local fields, the known-support Woodbury update matched the direct value to roundoff. This rank-16 calculation illustrates the benefit of knowing which bonds vary; the update identity is classical [4].
 
-At n = 208 the uniform threshold is E₀ = 1.2059805. For 1,024 additional seed indices in each family, the localized queries used Woodbury. Distributed queries invoked the certified iteration only if the uniform trial bounds touched the threshold. On 32 seed indices per family, direct solves independently checked the classifications; all 96 agreed.
+At n = 208 the uniform threshold is E₀ = 1.2059805. A separate timing panel used 1,024 further seed indices in each family. The localized queries used Woodbury. Distributed queries invoked the certified iteration only if the trial interval touched the threshold. Each field was timed with both uniform-factor choices and a full reused-pattern Cholesky solve. The direct comparator reused its ordering but assembled and refactorized the field matrix for every query. A seeded permutation randomized the field order and the method order within each field. Both threshold pipelines agreed on every decision with the 3,072 full solves. For the 96 fields with an archived direct SuperLU check, the full Cholesky responses also agreed within numerical tolerance.
 
-| Field family | Above E₀ / 1,024 | Fraction | Iterative fallbacks | Query time (s) |
-| --- | --- | --- | --- | --- |
-| 16 local | 555 | 0.542 | 0 | 0.042 |
-| Distributed mild | 508 | 0.496 | 33 | 0.931 |
-| Distributed strong | 532 | 0.520 | 170 | 4.857 |
-Table 2. Timed threshold pipeline over 1,024 fields per family. The stored threshold implementation uses a reusable SuperLU factor for the uniform system. Query time excludes generation and 0.349 s shared setup. This is a separate timing block from Table 1.
+| Field family | Above E₀ / 1,024 | PCG fallbacks | Screen + Cholesky (s) | Screen + LU (s) | Full Cholesky (s) |
+| --- | --- | --- | --- | --- | --- |
+| 16 local | 555 | 0 | 0.086 | 0.084 | 25.223 |
+| Distributed mild | 508 | 33 | 0.627 | 0.930 | 24.962 |
+| Distributed strong | 532 | 170 | 2.821 | 4.619 | 24.910 |
+Table 2. Total query time for 1,024 matched fields per family. The first two timings use the indicated uniform factor for Woodbury or screened PCG. The last column refactorizes and solves every field, including those settled by an interval. All three columns were measured in the same timing run. Generation, common geometry, uniform assembly and one-time setup are excluded.
 
-On strong fields the trial interval settled 854 threshold decisions without iteration. In contrast, the same criterion settled none of the strong point estimates in the 48-field accuracy panel. Width controls the value request; distance from the reference controls the threshold request. The Monte Carlo standard error for the modeled exceedance fraction is about 0.016. Acceptance fractions depend on the field law, cut geometry and reference.
+Shared geometry and uniform assembly took 68.4 and 1.2 ms, respectively. Additional setup was 94.2 ms for the Cholesky-screen pipeline, 180.4 ms for its LU counterpart and 18.2 ms for the direct symbolic factor. Across all 3,072 queries, adding shared preparation and each method’s setup once gives 3.698 s, 5.883 s and 75.182 s, respectively. Both screened pipelines prepared the 16-bond Woodbury cache once for the whole three-family workload. Table 1 used an Intel Xeon Platinum 8573C host and omitted that cache. Table 2 used an AMD EPYC 9V74. Absolute times should be compared within each table. On strong fields the trial interval settled 854 threshold decisions without iteration. The same trial bounds met the point-value tolerance on none of the 48 strong fields in the accuracy panel. Width controls the value request; distance from the reference controls the threshold request. The Monte Carlo standard error for the modeled exceedance fraction is about 0.016. Acceptance fractions depend on the field law, cut geometry and reference.
 
 ## Limits of the timing comparison
 
@@ -72,13 +71,13 @@ These are finite, two-dimensional scalar networks with fixed physical spacing, a
 
 ## Data and code availability
 
-The supplement includes scripts, environment locks, source checks and machine-readable results. The five-size comparison has 720 timed method–field records. The separate accuracy and threshold datasets contain 288 and 3,072 field records. All fields can be regenerated from the published seeds.
+The supplement includes scripts, environment locks, source checks and machine-readable results. The five-size comparison has 720 timed method–field records. The accuracy panel has 288 field records. The paired threshold panel includes 3,072 fields, with both certified intervals and the full Cholesky response recorded for each. All fields can be regenerated from the published seeds.
 
-[Study files, software and source records](https://github.com/VEDANT1602/lattice-fracture-calibration/tree/main/study)
+Use the accompanying study directory to rerun `verify_scaling.py` and `verify_threshold_compare.py`. Individual timings and one-time costs are in `scaling_fields.csv` and `scaling_setup.csv`. The public project is <https://github.com/VEDANT1602/lattice-fracture-calibration>.
 
 ## Author and disclosures
 
-Vedant Thaker is the sole author, set the solver-selection question and requested direct and multigrid comparators at larger scales. OpenAI Codex assisted with the derivations, implementation, benchmark execution, numerical cross-checks and manuscript drafting.
+Vedant Thaker is the sole author. He specified the solver-selection question, the larger-scale direct and multigrid comparisons, and the matched Cholesky threshold benchmark. OpenAI Codex assisted with the derivations, implementation, benchmark execution, numerical cross-checks and manuscript drafting.
 
 This research received no specific grant from any funding agency in the public, commercial, or not-for-profit sectors. The author declares no competing interests.
 

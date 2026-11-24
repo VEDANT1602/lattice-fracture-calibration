@@ -9,3 +9,14 @@ The supplement README identifies the inputs and computations needed to inspect t
 ## Current work
 
 Vedant Thaker is the sole author, set the solver-selection question and requested direct and multigrid comparators at larger scales. OpenAI Codex assisted with the derivations, implementation, benchmark execution, numerical cross-checks and manuscript drafting.
+
+
+The November 22 analysis added the author's requested same-field Cholesky threshold comparison, interquartile timing spreads and setup amortization. Three timed paths ran on each of 3,072 fields, and the verification script compared the new full Cholesky response with both certified intervals, historical decisions and the 96 archived full SuperLU checks. These compute and writing tasks extend the computational assistance disclosed in the manuscript.
+
+## Date verification on November 22, 2026
+
+The author reports August 2–13, 2026 for the original work. The earliest public commit follows the end of the author-reported interval. Work during that interval cannot be verified from this history. The [first PDF commit](https://github.com/VEDANT1602/lattice-fracture-calibration/commit/2035d538e4d8a663059dddb9065924029597f563), the November 20 review copy, and the November 21 and 22 manuscript versions are recorded separately in [the manuscript history](VERSION.md).
+
+## November 24 editorial work
+
+Vedant Thaker supplied the critique and requested this revision. OpenAI Codex assisted with the analysis checks and revised prose. The manuscript describes the study-specific work and its limitations.

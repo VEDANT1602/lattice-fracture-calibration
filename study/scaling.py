@@ -79,7 +79,7 @@ def output_query(g, k, local):
 def cv_solve(factor, h):
     b = cvxopt.matrix(h)
     cholmod.solve(factor, b)
-    return np.array(b).ravel()
+    return np.asarray(b).reshape(np.shape(h), order="F")
 
 
 def hierarchy(matrix):
